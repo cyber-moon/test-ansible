@@ -1,0 +1,30 @@
+---
+- name: create some user
+  hosts: all
+  tasks:
+  - set_fact:
+      mount: "{{ ansible_mounts | first }}"
+  - set_fact:
+      disk_total_s: "{{ (mount.size_total / 1000000000) | round(1, 'common') }}GB"
+      disk_usage_ratio_s: "{{ 100 * (((mount.size_total - mount.size_available)|float / mount.size_total)|float) | round(1, 'common') }}%"
+  - name: get system information
+    debug:
+      msg:
+        - "System properties:"
+        - "Ansible host: {{ansible_ssh_host}}"
+        - "IP address: {{ansible_default_ipv4.address}}"
+        - "Total RAM: {{ ansible_memory_mb.real.total}}"
+        - "Number of Cores: {{ ansible_processor_vcpus }}"
+        - "Total Disk size: {{ disk_total_s }} ({{ disk_usage_ratio_s }} used)"
+  - name: ensure RAM
+    fail:
+      msg: "not enough RAM"
+    when: ansible_memory_mb.real.total < 4096
+  - name: ensure RAM with assert-module
+    assert:
+      that:
+        - ansible_memory_mb.real.total >= 4096
+  - name: create user alice
+    user:
+      name: "alice"
+...
